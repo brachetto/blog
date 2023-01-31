@@ -6,7 +6,7 @@ use ntex::{
     web::{ErrorRenderer, FromRequest},
 };
 use reqwest::Client;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{errors::CustomError, AppState};
 
@@ -23,7 +23,7 @@ pub struct AccessToken {
 }
 
 /// Github 返回的用户信息
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct GithubUserInfo {
     /// Github 用户 ID
     pub id: i32,
@@ -36,19 +36,21 @@ pub struct GithubUserInfo {
 /// 网站的所有用户（包括管理员）（用于身份验证）
 #[derive(Debug, Clone)]
 pub struct User {
-    pub access_token: String,
+    pub id: i32,
 }
 
 /// 网站的管理员（用于身份验证）
 #[derive(Debug, Clone)]
 pub struct Admin {
-    pub access_token: String,
+    pub id: i32,
 }
 
 // 实现 FromRequest trait
 // 可以从请求中提取用户数据并且验证用户的身份
 // async fn handler(user: User / admin: Admin)
 // 这样就可以为具体的 handler 添加身份认证了
+
+// 通过验证的用户都是存在于我们的数据库中的，可以通过 ID 查到
 
 impl<E: ErrorRenderer> FromRequest<E> for User {
     type Error = CustomError;
@@ -88,9 +90,7 @@ impl<E: ErrorRenderer> FromRequest<E> for User {
                 ));
             }
 
-            Ok(Self {
-                access_token: access_token.value().to_string(),
-            })
+            Ok(Self { id: user_id })
         };
 
         Box::pin(fut)
@@ -145,9 +145,7 @@ impl<E: ErrorRenderer> FromRequest<E> for Admin {
                 ));
             }
 
-            Ok(Self {
-                access_token: access_token.value().to_string(),
-            })
+            Ok(Self { id: user_id })
         };
 
         Box::pin(fut)
